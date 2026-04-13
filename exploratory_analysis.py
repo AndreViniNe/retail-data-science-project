@@ -7,7 +7,8 @@ import matplotlib.pyplot as plt
 df = pd.read_csv("./data/Retail_Transactions_Dataset.csv")
 df.head()
 
-# %% Análise Exploratória
+# %% 
+# Análise Exploratória
 df.shape
 
 #%%
@@ -53,86 +54,73 @@ df_expensive_purchase
 
 # %%
 #7- Quantidade de vendas por hora
-df_temporal = df[["Total_Items", "City"]].copy()
+df_temporal = df[["City"]].copy()
 df_temporal["DateCalendar"] = df["Date"].dt.date
 df_temporal["Hour"] = df["Date"].dt.hour
 df_temporal["Week_Day"] = df["Date"].dt.day_of_week
 df_temporal.head()
 
 # %%
-df_sales_per_hour = (
-    df_temporal.groupby("Hour", as_index=False)["Total_Items"]
-    .sum()
-    .sort_values(by="Hour")
-    .reset_index(drop=True)
-)
-
+df_sales_per_hour = (df_temporal["Hour"].value_counts() \
+                                        .sort_index()
+                    )
 df_sales_per_hour
 
 # %%
-df_sales_per_hour['Normalized_Total_Items'] = (df_sales_per_hour['Total_Items']) / 10000
-plt.bar(df_sales_per_hour['Hour'], df_sales_per_hour['Normalized_Total_Items'])
-plt.xlabel('Hour of the day')
-plt.ylabel('Total Items sold (%10000)')
-plt.xticks(np.arange(0,24))
-plt.yticks(np.arange(0, 25, step=2))
+df_sales_per_hour.plot(kind="bar", figsize=(10,4))
+plt.xlabel("Hora do dia")
+plt.ylabel("Número de vendas")
+plt.title("Vendas por hora")
 plt.show()
 
 # %%
 # 8- Quantidade de vendas por dia da semana
-df_sales_per_week_day = (
-    df_temporal.groupby("Week_Day", as_index=False)["Total_Items"]
-    .sum()
-    .sort_values(by="Week_Day")
-    .reset_index(drop=True)
-)
-
-df_sales_per_week_day
-
-# %%
-df_sales_per_week_day["Normalized_Total_Items"] = (df_sales_per_week_day['Total_Items']) / 10000
-day_names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
-plt.bar(df_sales_per_week_day['Week_Day'], df_sales_per_week_day['Normalized_Total_Items'])
-plt.xlabel('Week day')
-plt.ylabel('Total Items sold (%10000)')
+day_names = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom']
+df_temporal["Week_Day"].value_counts() \
+                       .sort_index() \
+                       .plot(kind="bar", figsize=(10,4))
+plt.xlabel("Dia da semana")
+plt.ylabel("Número de vendas")
+plt.title("Vendas por dia da semana")
 plt.xticks(np.arange(7), day_names)
 plt.show()
 # %%
 # 9- Dia e hora com mais venda por cidade
-df.head()
-
-# %%
-df_top_sales = df_temporal.groupby(["City", "Week_Day", "Hour"], as_index=False) \
-                          ["Total_Items"].sum()
+df_top_sales = (
+    df_temporal
+    .groupby(["City", "Week_Day", "Hour"], as_index=False)
+    .size()
+    .rename(columns={"size": "Sales_Count"})
+)
 df_top_sales
 
 # %%
-idx = df_top_sales.groupby("City")["Total_Items"].idxmax()
+idx = df_top_sales.groupby("City")["Sales_Count"].idxmax()
 df_top_sales_by_city = (
-    df_top_sales.loc[idx, ["City", "Week_Day", "Hour", "Total_Items"]]
-    .sort_values(by="City")
+    df_top_sales.loc[idx, ["City", "Week_Day", "Hour", "Sales_Count"]]
+    .sort_values("City")
     .reset_index(drop=True)
 )
+
 df_top_sales_by_city
 
 # %%
 plt.figure(figsize=(10,6))
 plt.scatter(
-df_top_sales_by_city["Hour"],
-df_top_sales_by_city["Week_Day"],
-s=df_top_sales_by_city["Total_Items"] / 5,
-alpha=0.7
+    df_top_sales_by_city["Hour"],
+    df_top_sales_by_city["Week_Day"],
+    s=df_top_sales_by_city["Sales_Count"] * 2,
+    alpha=0.7
 )
 
 for _, row in df_top_sales_by_city.iterrows():
     plt.text(row["Hour"] + 0.1, row["Week_Day"] + 0.05, row["City"], fontsize=8)
 
-day_names = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"]
 plt.yticks(range(7), day_names)
 plt.xticks(range(24))
-plt.xlabel("Hour")
-plt.ylabel("Week day")
-plt.title("Peak sales window by city (bubble size = Total_Items)")
+plt.xlabel("Hora")
+plt.ylabel("Dia da semana")
+plt.title("Melhor janela de vendas por cidade")
 plt.grid(alpha=0.2)
 plt.show()
 
